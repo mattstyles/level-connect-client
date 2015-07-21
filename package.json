@@ -1,0 +1,33 @@
+{
+  "name": "level-connect-client-client",
+  "version": "0.0.0",
+  "description": "Connect to a level-connect instance",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mattstyles/level-connect-client.git"
+  },
+  "homepage": "https://github.com/mattstyles/level-connect-client",
+  "keywords": [
+    "leveldb",
+    "level",
+    "http",
+    "level-connect"
+  ],
+  "engines": {
+    "node": ">=2.4.0"
+  },
+  "author": {
+    "name": "Matt Styles",
+    "email": "matt@veryfizzyjelly.com",
+    "url": "http://veryfizzyjelly.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "babel-core": "^5.7.4",
+    "superagent": "^1.2.0"
+  }
+}
