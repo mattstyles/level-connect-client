@@ -1,11 +1,11 @@
 
-import 'babel/polyfill'
+// This will be needed for the browser version
+// Check .babelrc for asyncToGenerator for browser
+//import 'babel/polyfill'
 
-import fs from 'fs'
 import path from 'path'
 
 import { config } from 'xdg-basedir'
-import mkdirp from 'mkdirp'
 import EventEmitter from 'eventemitter3'
 import request from 'superagent'
 import co from 'co'
@@ -15,11 +15,14 @@ import CONSTANTS from './constants'
 import fileUtils from './file'
 
 
-class Client extends EventEmitter {
-    constructor() {
+export default class Client extends EventEmitter {
+    constructor( options ) {
         super()
 
-        this.connect = CONSTANTS.CONNECT_URL
+        let opts = options || {}
+
+
+        this.connect = opts.connectURL || CONSTANTS.CONNECT_URL
         this.token = 'new'
         this.configPath = path.join( config, pkg.name )
         this.tokenFile = path.join( this.configPath, 'token' )
@@ -31,9 +34,8 @@ class Client extends EventEmitter {
         // Op queue
         this.queue = []
 
-        // Try to grab a stored token
+        // Perform init
         // @TODO add pluggable storage mechanism
-
         co( this.init() )
             .then( () => {
                 this.emit( 'ready' )
@@ -46,13 +48,14 @@ class Client extends EventEmitter {
             })
     }
 
+    /**
+     * Init generator
+     * Sets up the persistence layer the client needs
+     */
     *init() {
-        let configPath = path.join( config, pkg.name )
-        let tokenFile = path.join( configPath, 'token' )
-
         // Ensure config directory exists
         try {
-            yield fileUtils.mkdirp( configPath )
+            yield fileUtils.mkdirp( this.configPath )
         } catch( err ) {
             console.error( 'make config directory error' )
             throw new Error( err )
@@ -60,7 +63,7 @@ class Client extends EventEmitter {
 
         // Try to grab the token, create if necessary
         try {
-            let res = yield fileUtils.readFile( tokenFile )
+            let res = yield fileUtils.readFile( this.tokenFile )
             this.token = res.toString()
         } catch( err ) {
             // If token file does not exist then request a fresh token
@@ -74,6 +77,10 @@ class Client extends EventEmitter {
         }
     }
 
+    /**
+     * Request token generator
+     * Grabs a fresh token from the server and persists it
+     */
     *requestToken() {
         var res = null
 
@@ -101,6 +108,13 @@ class Client extends EventEmitter {
 
     }
 
+    /**
+     * Simple promisified request
+     * Resolves with the entire response
+     * @param opts <Object>
+     *   method <String> http method to use
+     *   url <String> url to hit
+     */
     request( opts ) {
         return new Promise( ( resolve, reject ) => {
             request( opts.method, opts.url )
@@ -117,8 +131,4 @@ class Client extends EventEmitter {
         })
     }
 
-
-
 }
-
-export default new Client()
