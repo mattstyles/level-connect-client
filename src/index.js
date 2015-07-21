@@ -14,6 +14,7 @@ import pkg from '../package.json'
 import CONSTANTS from './constants'
 import fileUtils from './file'
 
+var attempts = 0
 
 export default class Client extends EventEmitter {
     constructor( options ) {
@@ -21,9 +22,10 @@ export default class Client extends EventEmitter {
 
         let opts = options || {}
 
+        this._connected = false
 
         this.connect = opts.connectURL || CONSTANTS.CONNECT_URL
-        this.token = 'new'
+        this.token = null
         this.configPath = path.join( config, pkg.name )
         this.tokenFile = path.join( this.configPath, 'token' )
 
@@ -31,21 +33,23 @@ export default class Client extends EventEmitter {
             throw new Error( 'Connect URL invalid' )
         }
 
-        // Op queue
-        this.queue = []
-
         // Perform init
         // @TODO add pluggable storage mechanism
         co( this.init() )
             .then( () => {
                 this.emit( 'ready' )
-                console.log( this )
                 return
             })
             .catch( err => {
                 console.error( 'Initialisation error' )
                 console.error( err )
             })
+    }
+
+    checkConnection() {
+        if ( !this.token ) {
+            throw new Error( 'Connection lost, was the connection ready?' )
+        }
     }
 
     /**
@@ -69,7 +73,6 @@ export default class Client extends EventEmitter {
             // If token file does not exist then request a fresh token
             if ( err.code === 'ENOENT' ) {
                 let res = yield this.requestToken()
-                this.token = res
                 return
             }
 
@@ -87,13 +90,14 @@ export default class Client extends EventEmitter {
         try {
             res = yield this.request({
                 method: 'POST',
-                url: this.connect + CONSTANTS.TOKEN_REQUEST_URL
+                url: CONSTANTS.TOKEN_REQUEST_URL
             })
 
             console.log( 'Token request success' )
 
             try {
                 yield fileUtils.writeFile( this.tokenFile, res.body.id )
+                this.token = res.body.id
 
                 // Return the token and let the executor choose what to do with it
                 return res.body.id
@@ -117,11 +121,10 @@ export default class Client extends EventEmitter {
      */
     request( opts ) {
         return new Promise( ( resolve, reject ) => {
-            request( opts.method, opts.url )
-                .set( CONSTANTS.TOKEN_HEADER, this.token )
+            request( opts.method, CONSTANTS.CONNECT_PROTOCOL + path.join( this.connect, opts.url ) )
+                .set( CONSTANTS.TOKEN_HEADER, this.token || 'new' )
                 .end( ( err, res ) => {
                     if ( err ) {
-                        console.error( 'Request error' )
                         reject( err )
                         return
                     }
@@ -129,6 +132,63 @@ export default class Client extends EventEmitter {
                     resolve( res )
                 })
         })
+    }
+
+    /*-----------------------------------------------------------*
+     *
+     *  Server access methods
+     *
+     *-----------------------------------------------------------*/
+
+    /**
+     * Returns a single value from a group
+     */
+    get( group, key, noRefresh ) {
+        this.checkConnection()
+
+        if ( !group || !key ) {
+            throw new Error( 'GET requires a group and key' )
+        }
+
+        return new Promise( ( resolve, reject ) => {
+            this.request({
+                method: 'GET',
+                url: path.join( group, key )
+            })
+                .then( res => resolve( res.body ) )
+                .catch( err => {
+                    // If we get a forbidden then a token refresh will probably solve it
+                    if ( err.status === 403 ) {
+                        // Bail if refreshing the token still fails
+                        if ( noRefresh ) {
+                            reject({
+                                status: 403,
+                                body: 'Authentication can not be established'
+                            })
+                            return
+                        }
+
+                        // Attempt a token refresh
+                        co( this.requestToken() )
+                            .then( () => {
+                                this.get( group, key, true )
+                                    .then( resolve )
+                                    .catch( reject )
+                            })
+                            .catch( err => reject({
+                                status: 403,
+                                body: 'Authentication can not be established',
+                                err: err
+                            }))
+
+                        return
+                    }
+
+                    // Any other sort of error and just punt it out
+                    reject( err )
+                })
+        })
+
     }
 
 }
