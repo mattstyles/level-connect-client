@@ -2,7 +2,7 @@
 
 > Connects to a level-connect instance
 
-Level-connect-client is a small utility client for connecting to a level-connect server. It seamlessly handles the minimal handshake and exposes http api used to manipulate the underlying database instance.
+Level-connect-client is a small utility client for connecting to a level-connect server. It seamlessly handles the minimal handshake and exposes the http api used to manipulate the underlying database instance.
 
 ## Installation
 
@@ -45,6 +45,13 @@ client.on( 'ready', co( *() => {
 }))
 ```
 
+Using instantiation parameters is only one way to set up the client, a more useful method is to use environment variables
+
+```
+CONNECT_URL='example.com'
+CONNECT_PROTOCOL='http://'
+```
+
 ## API
 
 ### GET `group` `key`
@@ -53,13 +60,13 @@ client.on( 'ready', co( *() => {
 client.get( 'users', 'bob' )
 ```
 
-### DELETE 'group' 'key'
+### DELETE `group` `key`
 
 ```js
 client.delete( 'users', 'carl' )
 ```
 
-### PUT 'group' 'key' 'value'
+### PUT `group` `key` `value`
 
 ```js
 client.put( 'users', 'dave', {
