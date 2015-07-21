@@ -74,11 +74,31 @@ class Client extends EventEmitter {
         }
     }
 
-    requestToken() {
-        return this.request({
-            method: 'POST',
-            url: this.connect + CONSTANTS.TOKEN_REQUEST_URL
-        })
+    *requestToken() {
+        var res = null
+
+        try {
+            res = yield this.request({
+                method: 'POST',
+                url: this.connect + CONSTANTS.TOKEN_REQUEST_URL
+            })
+
+            console.log( 'Token request success' )
+
+            try {
+                yield fileUtils.writeFile( this.tokenFile, res.body.id )
+
+                // Return the token and let the executor choose what to do with it
+                return res.body.id
+            } catch( err ) {
+                console.error( 'Error persisting token' )
+                throw new Error( err )
+            }
+        } catch( err ) {
+            console.error( 'Error requesting token' )
+            throw new Error( err )
+        }
+
     }
 
     request( opts ) {
@@ -87,14 +107,12 @@ class Client extends EventEmitter {
                 .set( CONSTANTS.TOKEN_HEADER, this.token )
                 .end( ( err, res ) => {
                     if ( err ) {
-                        console.error( 'Token request error' )
-                        return reject( err )
+                        console.error( 'Request error' )
+                        reject( err )
+                        return
                     }
-                    console.log( 'Token request success' )
 
-                    fileUtils.writeFile( this.tokenFile, res.body.id )
-                        .then( () => resolve( res.body.id ) )
-                        .catch( reject )
+                    resolve( res )
                 })
         })
     }
