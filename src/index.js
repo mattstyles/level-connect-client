@@ -314,4 +314,69 @@ export default class Client extends EventEmitter {
         })
     }
 
+
+    /**
+     * Performs a batch into a group
+     */
+    batch( group, ops, noRefresh ) {
+        this._checkConnection()
+
+        if ( !group || !ops ) {
+            throw new Error( 'BATCH requires a group and some data' )
+        }
+
+        if ( !ops || !ops.length ) {
+            throw new Error( 'BATCH requires an array of data' )
+        }
+
+        ops.forEach( op => {
+            if ( !op.type ) {
+                throw new Error( 'BATCH invalid operations' )
+            }
+        })
+
+        return new Promise( ( resolve, reject ) => {
+            this._request({
+                method: 'POST',
+                url: path.join( group ),
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                data: ops
+            })
+                .then( res => resolve( res.body ) )
+                .catch( err => {
+                    // If we get a forbidden then a token refresh will probably solve it
+                    if ( err.status === 403 ) {
+                        // Bail if refreshing the token still fails
+                        if ( noRefresh ) {
+                            reject({
+                                status: 403,
+                                body: 'Authentication can not be established'
+                            })
+                            return
+                        }
+
+                        // Attempt a token refresh
+                        co( this._requestToken() )
+                            .then( () => {
+                                this.put( group, ops, true )
+                                    .then( resolve )
+                                    .catch( reject )
+                            })
+                            .catch( err => reject({
+                                status: 403,
+                                body: 'Authentication can not be established',
+                                err: err
+                            }))
+
+                        return
+                    }
+
+                    // Any other sort of error and just punt it out
+                    reject( err )
+                })
+        })
+    }
+
 }
