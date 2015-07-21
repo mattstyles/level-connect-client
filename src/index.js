@@ -14,7 +14,6 @@ import pkg from '../package.json'
 import CONSTANTS from './constants'
 import fileUtils from './file'
 
-var attempts = 0
 
 export default class Client extends EventEmitter {
     constructor( options ) {
@@ -118,19 +117,35 @@ export default class Client extends EventEmitter {
      * @param opts <Object>
      *   method <String> http method to use
      *   url <String> url to hit
+     *   headers <Array:Object> headers to append
      */
     request( opts ) {
         return new Promise( ( resolve, reject ) => {
-            request( opts.method, CONSTANTS.CONNECT_PROTOCOL + path.join( this.connect, opts.url ) )
-                .set( CONSTANTS.TOKEN_HEADER, this.token || 'new' )
-                .end( ( err, res ) => {
-                    if ( err ) {
-                        reject( err )
-                        return
-                    }
+            let req = request( opts.method, CONSTANTS.CONNECT_PROTOCOL + path.join( this.connect, opts.url ) )
 
-                    resolve( res )
+            // Add custom header
+            req.set( CONSTANTS.TOKEN_HEADER, this.token || 'new' )
+
+            // Add any other headers from the options map
+            if ( opts.headers ) {
+                Object.keys( opts.headers ).forEach( header => {
+                    req.set( header, opts.headers[ header ] )
                 })
+            }
+
+            if ( opts.data ) {
+                req.send( opts.data )
+            }
+
+            // Push out the request
+            req.end( ( err, res ) => {
+                if ( err ) {
+                    reject( err )
+                    return
+                }
+
+                resolve( res )
+            })
         })
     }
 
@@ -221,7 +236,65 @@ export default class Client extends EventEmitter {
                         // Attempt a token refresh
                         co( this.requestToken() )
                             .then( () => {
-                                this.get( group, key, true )
+                                this.delete( group, key, true )
+                                    .then( resolve )
+                                    .catch( reject )
+                            })
+                            .catch( err => reject({
+                                status: 403,
+                                body: 'Authentication can not be established',
+                                err: err
+                            }))
+
+                        return
+                    }
+
+                    // Any other sort of error and just punt it out
+                    reject( err )
+                })
+        })
+    }
+
+    /**
+     * Puts a single value into a group
+     */
+    put( group, key, data, noRefresh ) {
+        this.checkConnection()
+
+        if ( !group || !key ) {
+            throw new Error( 'PUT requires a group and key' )
+        }
+
+        if ( !data ) {
+            console.warn( 'PUT no data, is this intentional?' )
+        }
+
+        return new Promise( ( resolve, reject ) => {
+            this.request({
+                method: 'POST',
+                url: path.join( group, key ),
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                data: data
+            })
+                .then( res => resolve( res.body ) )
+                .catch( err => {
+                    // If we get a forbidden then a token refresh will probably solve it
+                    if ( err.status === 403 ) {
+                        // Bail if refreshing the token still fails
+                        if ( noRefresh ) {
+                            reject({
+                                status: 403,
+                                body: 'Authentication can not be established'
+                            })
+                            return
+                        }
+
+                        // Attempt a token refresh
+                        co( this.requestToken() )
+                            .then( () => {
+                                this.put( group, key, data, true )
                                     .then( resolve )
                                     .catch( reject )
                             })
