@@ -35,14 +35,16 @@ The public API all returns promises so feel free to use generators if that’s m
 ```js
 import co from 'co'
 
-client.on( 'ready', co( *() => {
-  try {
-    let user = yield client.get( 'users', 'bob' )
-    // Do stuff with user
-  } catch( err ) {
-    // Handle error
-  }
-}))
+client.on( 'ready', () => {
+  co( *() => {
+    try {
+      let user = yield client.get( 'users', 'bob' )
+      // Do stuff with user
+    } catch( err ) {
+      // Handle error
+    }
+  })
+})
 ```
 
 Using instantiation parameters is only one way to set up the client, a more useful method is to use environment variables
