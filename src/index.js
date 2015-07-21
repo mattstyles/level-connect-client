@@ -188,7 +188,56 @@ export default class Client extends EventEmitter {
                     reject( err )
                 })
         })
+    }
 
+    /**
+     * Deletes a single value from a group
+     */
+    delete( group, key, noRefresh ) {
+        this.checkConnection()
+
+        if ( !group || !key ) {
+            throw new Error( 'DELETE requires a group and key' )
+        }
+
+        return new Promise( ( resolve, reject ) => {
+            this.request({
+                method: 'DELETE',
+                url: path.join( group, key )
+            })
+                .then( res => resolve( res.body ) )
+                .catch( err => {
+                    // If we get a forbidden then a token refresh will probably solve it
+                    if ( err.status === 403 ) {
+                        // Bail if refreshing the token still fails
+                        if ( noRefresh ) {
+                            reject({
+                                status: 403,
+                                body: 'Authentication can not be established'
+                            })
+                            return
+                        }
+
+                        // Attempt a token refresh
+                        co( this.requestToken() )
+                            .then( () => {
+                                this.get( group, key, true )
+                                    .then( resolve )
+                                    .catch( reject )
+                            })
+                            .catch( err => reject({
+                                status: 403,
+                                body: 'Authentication can not be established',
+                                err: err
+                            }))
+
+                        return
+                    }
+
+                    // Any other sort of error and just punt it out
+                    reject( err )
+                })
+        })
     }
 
 }
