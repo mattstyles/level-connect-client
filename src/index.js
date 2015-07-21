@@ -1,6 +1,7 @@
 
 // This will be needed for the browser version
 // Check .babelrc for asyncToGenerator for browser
+// Babel-core will need whacking back into deps
 //import 'babel/polyfill'
 
 import path from 'path'
@@ -34,7 +35,7 @@ export default class Client extends EventEmitter {
 
         // Perform init
         // @TODO add pluggable storage mechanism
-        co( this.init() )
+        co( this._init() )
             .then( () => {
                 this.emit( 'ready' )
                 return
@@ -45,7 +46,7 @@ export default class Client extends EventEmitter {
             })
     }
 
-    checkConnection() {
+    _checkConnection() {
         if ( !this.token ) {
             throw new Error( 'Connection lost, was the connection ready?' )
         }
@@ -55,7 +56,7 @@ export default class Client extends EventEmitter {
      * Init generator
      * Sets up the persistence layer the client needs
      */
-    *init() {
+    *_init() {
         // Ensure config directory exists
         try {
             yield fileUtils.mkdirp( this.configPath )
@@ -71,7 +72,7 @@ export default class Client extends EventEmitter {
         } catch( err ) {
             // If token file does not exist then request a fresh token
             if ( err.code === 'ENOENT' ) {
-                let res = yield this.requestToken()
+                let res = yield this._requestToken()
                 return
             }
 
@@ -83,11 +84,11 @@ export default class Client extends EventEmitter {
      * Request token generator
      * Grabs a fresh token from the server and persists it
      */
-    *requestToken() {
+    *_requestToken() {
         var res = null
 
         try {
-            res = yield this.request({
+            res = yield this._request({
                 method: 'POST',
                 url: CONSTANTS.TOKEN_REQUEST_URL
             })
@@ -119,7 +120,7 @@ export default class Client extends EventEmitter {
      *   url <String> url to hit
      *   headers <Array:Object> headers to append
      */
-    request( opts ) {
+    _request( opts ) {
         return new Promise( ( resolve, reject ) => {
             let req = request( opts.method, CONSTANTS.CONNECT_PROTOCOL + path.join( this.connect, opts.url ) )
 
@@ -159,14 +160,14 @@ export default class Client extends EventEmitter {
      * Returns a single value from a group
      */
     get( group, key, noRefresh ) {
-        this.checkConnection()
+        this._checkConnection()
 
         if ( !group || !key ) {
             throw new Error( 'GET requires a group and key' )
         }
 
         return new Promise( ( resolve, reject ) => {
-            this.request({
+            this._request({
                 method: 'GET',
                 url: path.join( group, key )
             })
@@ -184,7 +185,7 @@ export default class Client extends EventEmitter {
                         }
 
                         // Attempt a token refresh
-                        co( this.requestToken() )
+                        co( this._requestToken() )
                             .then( () => {
                                 this.get( group, key, true )
                                     .then( resolve )
@@ -209,14 +210,14 @@ export default class Client extends EventEmitter {
      * Deletes a single value from a group
      */
     delete( group, key, noRefresh ) {
-        this.checkConnection()
+        this._checkConnection()
 
         if ( !group || !key ) {
             throw new Error( 'DELETE requires a group and key' )
         }
 
         return new Promise( ( resolve, reject ) => {
-            this.request({
+            this._request({
                 method: 'DELETE',
                 url: path.join( group, key )
             })
@@ -234,7 +235,7 @@ export default class Client extends EventEmitter {
                         }
 
                         // Attempt a token refresh
-                        co( this.requestToken() )
+                        co( this._requestToken() )
                             .then( () => {
                                 this.delete( group, key, true )
                                     .then( resolve )
@@ -259,7 +260,7 @@ export default class Client extends EventEmitter {
      * Puts a single value into a group
      */
     put( group, key, data, noRefresh ) {
-        this.checkConnection()
+        this._checkConnection()
 
         if ( !group || !key ) {
             throw new Error( 'PUT requires a group and key' )
@@ -270,7 +271,7 @@ export default class Client extends EventEmitter {
         }
 
         return new Promise( ( resolve, reject ) => {
-            this.request({
+            this._request({
                 method: 'POST',
                 url: path.join( group, key ),
                 headers: {
@@ -292,7 +293,7 @@ export default class Client extends EventEmitter {
                         }
 
                         // Attempt a token refresh
-                        co( this.requestToken() )
+                        co( this._requestToken() )
                             .then( () => {
                                 this.put( group, key, data, true )
                                     .then( resolve )

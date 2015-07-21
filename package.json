@@ -32,7 +32,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "babel-core": "^5.7.4",
     "co": "^4.6.0",
     "denodeify": "^1.2.1",
     "eventemitter3": "^1.1.1",
