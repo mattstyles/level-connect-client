@@ -78,6 +78,21 @@ client.put( 'users', 'dave', {
 })
 ```
 
+### BATCH `group` `ops`
+
+```js
+client.batch( 'users', [
+  {
+    type: 'put',
+    key: 'arg',
+    value: { name: 'Arg', scopes: 'user' }
+  },
+  {
+    type: 'del',
+    key: 'bob'
+  }
+])
+```
 
 ## Hacking
 
