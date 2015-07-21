@@ -20,13 +20,13 @@ const client = new Client({
 })
 
 client.on( 'ready', () => {
-    client.get( 'users', 'bob' )
-      .then( res => {
-          // Do stuff with user
-      })
-      .catch( err => {
-          // Handle error
-      })
+  client.get( 'users', 'bob' )
+    .then( res => {
+      // Do stuff with user
+    })
+    .catch( err => {
+      // Handle error
+    })
 })
 ```
 
