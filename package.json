@@ -1,6 +1,6 @@
 {
   "name": "level-connect-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Connect to a level-connect instance",
   "main": "lib/index.js",
   "scripts": {
