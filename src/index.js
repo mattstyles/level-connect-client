@@ -158,7 +158,7 @@ export default class Client extends EventEmitter {
      *-----------------------------------------------------------*/
 
     ping() {
-        this._connection()
+        this._checkConnection()
 
         return new Promise( ( resolve, reject ) => {
             this._request({
