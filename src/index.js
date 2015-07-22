@@ -5,6 +5,7 @@
 //import 'babel/polyfill'
 
 import path from 'path'
+import { Writable } from 'stream'
 
 import { config } from 'xdg-basedir'
 import EventEmitter from 'eventemitter3'
@@ -389,65 +390,32 @@ export default class Client extends EventEmitter {
             throw new Error( 'READ requires a group to stream from' )
         }
 
-        return new Promise( ( resolve, reject ) => {
-            request
-                .get( CONSTANTS.CONNECT_PROTOCOL + path.join( this.connect, group ) )
-                .set( CONSTANTS.TOKEN_HEADER, this.token )
-                .type( 'json' )
-                .on( 'error', err => {
-                    console.error( 'Error creating read stream' )
-                    console.error( err )
-                })
-                .end( ( err, res ) => {
-                    if ( err ) {
-                        console.log( '.end error' )
-                        reject( err )
-                    }
+        var stream = null
 
-                    resolve( res )
-                })
-
+        // Stream->emitter
+        const emitter = new Writable({
+            write: function( chunk, enc, next ) {
+                if ( stream.res.statusCode !== 200 ) {
+                    this.emit( 'error', stream.res.statusCode )
+                    return
+                }
+                this.emit( 'data', chunk.toString() )
+                next()
+            }
         })
 
+        stream = request
+            .get( CONSTANTS.CONNECT_PROTOCOL + path.join( this.connect, group ) )
+            .set( CONSTANTS.TOKEN_HEADER, this.token )
+            .type( 'json' )
+            .on( 'error', err => {
+                console.error( 'Error creating read stream' )
+                console.error( err )
+            })
 
-        // return new Promise( ( resolve, reject ) => {
-        //     this._request({
-        //         method: 'GET',
-        //         url: path.join( group )
-        //     })
-        //         .then( res => resolve( res.body ) )
-        //         .catch( err => {
-        //             // If we get a forbidden then a token refresh will probably solve it
-        //             if ( err.status === 403 ) {
-        //                 // Bail if refreshing the token still fails
-        //                 if ( noRefresh ) {
-        //                     reject({
-        //                         status: 403,
-        //                         body: 'Authentication can not be established'
-        //                     })
-        //                     return
-        //                 }
-        //
-        //                 // Attempt a token refresh
-        //                 co( this._requestToken() )
-        //                     .then( () => {
-        //                         this.get( group, key, true )
-        //                             .then( resolve )
-        //                             .catch( reject )
-        //                     })
-        //                     .catch( err => reject({
-        //                         status: 403,
-        //                         body: 'Authentication can not be established',
-        //                         err: err
-        //                     }))
-        //
-        //                 return
-        //             }
-        //
-        //             // Any other sort of error and just punt it out
-        //             reject( err )
-        //         })
-        // })
+        stream.pipe( emitter )
+
+        return emitter
     }
 
 }
