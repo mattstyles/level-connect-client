@@ -157,6 +157,21 @@ export default class Client extends EventEmitter {
      *
      *-----------------------------------------------------------*/
 
+    ping() {
+        this._connection()
+
+        return new Promise( ( resolve, reject ) => {
+            this._request({
+                method: 'GET',
+                url: CONSTANTS.PING_URL
+            })
+                .then( res => resolve( res.body ) )
+                .catch( err => {
+                    reject( err )
+                })
+        })
+    }
+
     /**
      * Returns a single value from a group
      */
