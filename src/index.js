@@ -382,6 +382,8 @@ export default class Client extends EventEmitter {
 
     /**
      * Returns a stream of values from a group
+     * Returns an emitter with 'data' and 'error' events
+     * Emits key,value data objects on 'data'
      */
     read( group, noRefresh ) {
         this._checkConnection()
@@ -399,9 +401,11 @@ export default class Client extends EventEmitter {
                     this.emit( 'error', stream.res.statusCode )
                     return
                 }
-                this.emit( 'data', chunk.toString() )
+                this.emit( 'data', JSON.parse( chunk.toString() ) )
                 next()
             }
+        }, {
+            objectMode: true
         })
 
         stream = request
