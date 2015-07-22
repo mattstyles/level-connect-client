@@ -408,6 +408,9 @@ export default class Client extends EventEmitter {
             objectMode: true
         })
 
+        // convenience helper
+        emitter.on( 'finish', () => emitter.emit( 'end' ))
+
         stream = request
             .get( CONSTANTS.CONNECT_PROTOCOL + path.join( this.connect, group ) )
             .set( CONSTANTS.TOKEN_HEADER, this.token )
