@@ -59,17 +59,23 @@ CONNECT_PROTOCOL='http://'
 
 ### GET `group` `key`
 
+Returns a single key from a group as an object
+
 ```js
 client.get( 'users', 'bob' )
 ```
 
 ### DELETE `group` `key`
 
+Removes a single key from a group
+
 ```js
 client.delete( 'users', 'carl' )
 ```
 
 ### PUT `group` `key` `value`
+
+Pass an object and stick it into the key within the group
 
 ```js
 client.put( 'users', 'dave', {
@@ -80,6 +86,8 @@ client.put( 'users', 'dave', {
 ```
 
 ### BATCH `group` `ops`
+
+Stick in an array of values to group
 
 ```js
 client.batch( 'users', [
@@ -94,6 +102,24 @@ client.batch( 'users', [
   }
 ])
 ```
+
+### READ `group`
+
+Returns a stream of objects from the group
+
+```js
+client.read( 'users' )
+  .on( 'data', console.log )
+
+// -> { key: 'bob', { scopes: 'user' } }
+// -> { key: 'carl', { scopes: 'viewer' } }
+// -> { key: 'dave', { scopes: 'user' } }
+```
+
+The returned object stream emits `data`, `error` and `end` events.
+
+Read won’t automatically handle authentication with the server but will return an error.
+
 
 ## Hacking
 
