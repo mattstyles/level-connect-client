@@ -21,13 +21,16 @@ export default class Client extends EventEmitter {
     constructor( options ) {
         super()
 
-        let opts = options || {}
+        let opts = Object.assign({
+	    connectURL: CONSTANTS.CONNECT_URL,
+            name: pkg.name
+	}, options )
 
         this._connected = false
 
-        this.connect = opts.connectURL || CONSTANTS.CONNECT_URL
+        this.connect = opts.connectURL
         this.token = null
-        this.configPath = path.join( config, pkg.name )
+        this.configPath = path.join( config, opts.name )
         this.tokenFile = path.join( this.configPath, 'token' )
 
         if ( !this.connect ) {
