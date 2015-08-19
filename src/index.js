@@ -47,6 +47,7 @@ export default class Client extends EventEmitter {
             .catch( err => {
                 console.error( 'Initialisation error' )
                 console.error( err )
+                this.emit( 'error', err )
             })
     }
 
